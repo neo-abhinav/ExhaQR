@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ExhaQR - QR Code Generator and Scanner</title>
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #181f2a 0%, #232b3a 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            color: #eaf6ff;
+        }
+        .container {
+            max-width: 420px;
+            margin: 40px auto 0 auto;
+            background: #232b3a;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px rgba(0, 0, 0, 0.35);
+            padding: 32px 28px 28px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            font-size: 2.1rem;
+            font-weight: 700;
+            color: #6ec1ff;
+            margin-bottom: 18px;
+            letter-spacing: 1px;
+            text-align: center;
+            text-shadow: 0 2px 8px #0a2540;
+        }
+        label {
+            font-size: 1rem;
+            color: #b6c9e1;
+            margin-bottom: 6px;
+            display: block;
+        }
+        #qrInput {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid #2d9cff;
+            background: #1a2230;
+            color: #eaf6ff;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 18px;
+            outline: none;
+            transition: border 0.2s, background 0.2s;
+            box-sizing: border-box;
+        }
+        #qrInput:focus {
+            border-color: #6ec1ff;
+            background: #232b3a;
+        }
+        #qrcode {
+            margin: 18px 0 28px 0;
+            background: #1a2230;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+        }
+        h2 {
+            font-size: 1.2rem;
+            color: #6ec1ff;
+            margin: 18px 0 10px 0;
+            font-weight: 600;
+            text-align: center;
+            text-shadow: 0 1px 4px #0a2540;
+        }
+        #cameraView {
+            width: 320px;
+            height: 240px;
+            border-radius: 10px;
+            border: 1.5px solid #2d9cff;
+            background: #1a2230;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            display: block;
+        }
+        #scanButton, #openScanModal, .scan-option-btn {
+            background: linear-gradient(90deg, #2d9cff 0%, #6ec1ff 100%);
+            color: #181f2a;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 28px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(46, 180, 255, 0.13);
+            transition: background 0.2s, transform 0.1s, color 0.2s;
+        }
+        #scanButton:hover, #openScanModal:hover, .scan-option-btn:hover {
+            background: linear-gradient(90deg, #6ec1ff 0%, #2d9cff 100%);
+            color: #0a2540;
+            transform: translateY(-2px) scale(1.03);
+        }
+        #scanResult {
+            min-height: 24px;
+            color: #ff6e6e;
+            font-size: 1rem;
+            margin-top: 4px;
+            text-align: center;
+        }
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0; width: 100vw; height: 100vh;
+            background: rgba(10, 37, 64, 0.55);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: #232b3a;
+            border-radius: 14px;
+            box-shadow: 0 6px 32px rgba(0,0,0,0.45);
+            padding: 28px 24px 20px 24px;
+            min-width: 320px;
+            max-width: 95vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #6ec1ff;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .modal-close:hover {
+            color: #ff6e6e;
+        }
+        .scan-options {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+        .scan-option-btn {
+            margin-bottom: 0;
+        }
+        .modal-section {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            align-items: center;
+        }
+        .modal-section.active {
+            display: flex;
+        }
+        #modalCameraView {
+            width: 320px;
+            height: 240px;
+            border-radius: 10px;
+            border: 1.5px solid #2d9cff;
+            background: #1a2230;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            display: block;
+        }
+        #modalScanResult {
+            min-height: 24px;
+            color: #ff6e6e;
+            font-size: 1rem;
+            margin-top: 4px;
+            text-align: center;
+        }
+        #modalImageInput {
+            margin-bottom: 10px;
+            color: #eaf6ff;
+            background: #1a2230;
+            border: none;
+        }
+        #modalImageDropZone {
+            width: 100%;
+            min-height: 80px;
+            border: 2px dashed #2d9cff;
+            border-radius: 8px;
+            background: #1a2230;
+            color: #6ec1ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            transition: border-color 0.2s, background 0.2s, color 0.2s;
+        }
+        #modalImageDropZone.dragover {
+            border-color: #6ec1ff;
+            background: #232b3a;
+            color: #eaf6ff;
+        }
+        #modalImageScanResult {
+            color: #ff6e6e;
+        }
+        .qr-float-result {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 320px;
+            max-width: 90vw;
+            background: #181f2a;
+            border: 2.5px solid #2d9cff;
+            border-radius: 18px;
+            box-shadow: 0 8px 40px 0 #2d9cff55, 0 2px 16px #000a;
+            z-index: 2000;
+            padding: 32px 28px 28px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: popIn 0.25s cubic-bezier(.68,-0.55,.27,1.55);
+        }
+        @keyframes popIn {
+            0% { transform: translate(-50%, -60%) scale(0.85); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        .qr-float-title {
+            color: #6ec1ff;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-align: center;
+            text-shadow: 0 2px 8px #0a2540;
+        }
+        .qr-float-content {
+            color: #eaf6ff;
+            background: #232b3a;
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            word-break: break-all;
+            box-shadow: 0 2px 8px #2d9cff22;
+            text-align: center;
+        }
+        .qr-float-content a {
+            color: #6ec1ff;
+            word-break: break-all;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+        .qr-float-close {
+            position: absolute;
+            top: 12px;
+            right: 18px;
+            background: none;
+            border: none;
+            font-size: 1.7rem;
+            color: #6ec1ff;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .qr-float-close:hover {
+            color: #ff6e6e;
+        }
+        .qr-float-img-preview {
+            max-width: 180px;
+            max-height: 180px;
+            margin: 0 auto 12px auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 12px #2d9cff33;
+            display: block;
+        }
+        .qr-float-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(24, 31, 42, 0.75);
+            z-index: 1999;
+        }
+        .qr-float-copy-btn {
+            background: linear-gradient(90deg, #2d9cff 0%, #6ec1ff 100%);
+            color: #181f2a;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 22px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+            box-shadow: 0 2px 8px rgba(46, 180, 255, 0.13);
+            transition: background 0.2s, color 0.2s, transform 0.1s;
+        }
+        .qr-float-copy-btn:hover {
+            background: linear-gradient(90deg, #6ec1ff 0%, #2d9cff 100%);
+            color: #0a2540;
+            transform: translateY(-2px) scale(1.03);
+        }
+        ::selection {
+            background: #2d9cff;
+            color: #181f2a;
+        }
+        .qr-type-select-row {
+            width: 100%;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+        }
+        .qr-type-select-row label {
+            margin-bottom: 0;
+            color: #6ec1ff;
+            font-weight: 600;
+        }
+        #qrType {
+            background: #1a2230;
+            color: #eaf6ff;
+            border: 1.5px solid #2d9cff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+        #qrType:focus {
+            border-color: #6ec1ff;
+        }
+        .qr-fields {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .qr-fields input, .qr-fields textarea, .qr-fields select {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px 12px;
+            border: 1.5px solid #2d9cff;
+            border-radius: 8px;
+            background: #1a2230;
+            color: #eaf6ff;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s, background 0.2s;
+            box-sizing: border-box;
+        }
+        .qr-fields input:focus, .qr-fields textarea:focus, .qr-fields select:focus {
+            border-color: #6ec1ff;
+            background: #232b3a;
+        }
+        .qr-fields label {
+            color: #b6c9e1;
+            margin-bottom: 4px;
+            font-size: 0.98rem;
+            font-weight: 500;
+        }
+        @media (max-width: 480px) {
+            .container {
+                padding: 16px 4vw;
+            }
+            #cameraView, #modalCameraView {
+                width: 100%;
+                height: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ExhaQR - QR Code Generator and Scanner</h1>
+
+        <div class="qr-type-select-row">
+            <label for="qrType">QR Type:</label>
+            <select id="qrType">
+                <option value="url">URL / Website</option>
+                <option value="text">Text</option>
+                <option value="contact">Contact (vCard)</option>
+                <option value="wifi">WiFi Network</option>
+                <option value="email">Email</option>
+                <option value="sms">SMS</option>
+                <option value="phone">Phone Number</option>
+                <option value="calendar">Calendar Event</option>
+                <option value="geo">Geolocation</option>
+                <option value="appstore">App Store Link</option>
+                <option value="payment">Payment (UPI/PayPal)</option>
+            </select>
+        </div>
+
+        <form class="qr-fields" id="qrFields" autocomplete="off">
+            <!-- Dynamic fields will be injected here -->
+        </form>
+
+        <div id="qrcode"></div>
+
+        <h2>QR Code Scanner</h2>
+        <button id="openScanModal" style="margin-bottom:10px;">Scan QR Code</button>
+        <div id="scanResult"></div>
+    </div>
+
+    <!-- Modal Popup for QR Scan -->
+    <div class="modal" id="scanModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeScanModal" title="Close">&times;</button>
+            <h2 style="margin-top:0;">Scan QR Code</h2>
+            <div class="scan-options">
+                <button class="scan-option-btn" id="useCameraBtn">Use Camera</button>
+                <button class="scan-option-btn" id="uploadImageBtn">Upload Image</button>
+            </div>
+            <div class="modal-section" id="cameraSection">
+                <video id="modalCameraView" autoplay playsinline></video>
+                <div id="modalScanResult"></div>
+            </div>
+            <div class="modal-section" id="imageSection">
+                <div id="modalImageDropZone">Drop image here or choose a file</div>
+                <input type="file" id="modalImageInput" accept="image/*">
+                <div id="modalImageScanResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating QR Result Box (injected by JS) -->
+
+    <script>
+        // QR Code Generation
+        var qrcode = new QRCode(document.getElementById("qrcode"), {
+            text: "ExhaQR",
+            width: 128,
+            height: 128,
+            colorDark : "#eaf6ff",
+            colorLight : "#232b3a",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        function updateQrCode() {
+            var inputText = document.getElementById("qrInput").value;
+            qrcode.clear(); // Clear the previous QR code
+            qrcode.makeCode(inputText);
+        }
+
+        setInterval(updateQrCode, 100); // Update every 0.1 seconds
+
+        // Modal logic
+        const scanModal = document.getElementById('scanModal');
+        const openScanModalBtn = document.getElementById('openScanModal');
+        const closeScanModalBtn = document.getElementById('closeScanModal');
+        const useCameraBtn = document.getElementById('useCameraBtn');
+        const uploadImageBtn = document.getElementById('uploadImageBtn');
+        const cameraSection = document.getElementById('cameraSection');
+        const imageSection = document.getElementById('imageSection');
+        const modalCameraView = document.getElementById('modalCameraView');
+        const modalScanResult = document.getElementById('modalScanResult');
+        const modalImageInput = document.getElementById('modalImageInput');
+        const modalImageScanResult = document.getElementById('modalImageScanResult');
+        const modalImageDropZone = document.getElementById('modalImageDropZone');
+        let cameraStream = null;
+
+        function openScanModal() {
+            scanModal.classList.add('active');
+            cameraSection.classList.remove('active');
+            imageSection.classList.remove('active');
+            modalScanResult.innerText = '';
+            modalImageScanResult.innerText = '';
+            stopCamera();
+        }
+        function closeScanModal() {
+            scanModal.classList.remove('active');
+            cameraSection.classList.remove('active');
+            imageSection.classList.remove('active');
+            modalScanResult.innerText = '';
+            modalImageScanResult.innerText = '';
+            stopCamera();
+        }
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            modalCameraView.srcObject = null;
+        }
+        openScanModalBtn.addEventListener('click', openScanModal);
+        closeScanModalBtn.addEventListener('click', closeScanModal);
+
+        useCameraBtn.addEventListener('click', function() {
+            imageSection.classList.remove('active');
+            cameraSection.classList.add('active');
+            modalScanResult.innerText = '';
+            // Start camera
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function (stream) {
+                    cameraStream = stream;
+                    modalCameraView.srcObject = stream;
+                    modalCameraView.play();
+                })
+                .catch(function (error) {
+                    modalScanResult.innerText = "Error accessing camera: " + error.name;
+                });
+            // Placeholder: Add QR code scanning logic here
+        });
+
+        uploadImageBtn.addEventListener('click', function() {
+            cameraSection.classList.remove('active');
+            imageSection.classList.add('active');
+            modalImageScanResult.innerText = '';
+            stopCamera();
+        });
+
+        // Drag-and-drop logic for image upload
+        modalImageDropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            modalImageDropZone.classList.add('dragover');
+        });
+        modalImageDropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            modalImageDropZone.classList.remove('dragover');
+        });
+        modalImageDropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            modalImageDropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                modalImageInput.files = files;
+                handleImageFile(files[0]);
+            } else {
+                modalImageScanResult.innerText = "Only image files are allowed.";
+            }
+        });
+
+        modalImageInput.addEventListener('change', function() {
+            const file = modalImageInput.files[0];
+            handleImageFile(file);
+        });
+
+        function handleImageFile(file) {
+            if (!file) {
+                modalImageScanResult.innerText = "No image selected.";
+                return;
+            }
+            if (!file.type.startsWith('image/')) {
+                modalImageScanResult.innerText = "Only image files are allowed.";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Create a canvas to draw the image
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, img.width, img.height);
+
+                    // Get image data and decode QR
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+                    if (code) {
+                        modalImageScanResult.innerHTML = `<span style="color:#6ec1ff;">QR Code Result:</span><br><span style="color:#eaf6ff;background:#232b3a;padding:6px 10px;border-radius:6px;display:inline-block;margin-top:6px;">${code.data}</span>`;
+                    } else {
+                        modalImageScanResult.innerHTML = `<span style="color:#ff6e6e;">No QR code found in the image.</span>`;
+                    }
+                };
+                img.onerror = function() {
+                    modalImageScanResult.innerHTML = `<span style="color:#ff6e6e;">Could not load the image.</span>`;
+                };
+                img.src = e.target.result;
+            };
+            reader.onerror = function() {
+                modalImageScanResult.innerHTML = `<span style="color:#ff6e6e;">Failed to read the image file.</span>`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Floating QR Result logic
+        function showQrFloatResult({ result, imgSrc, error }) {
+            // Remove any existing result box
+            document.querySelectorAll('.qr-float-overlay, .qr-float-result').forEach(e => e.remove());
+
+            // Overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'qr-float-overlay';
+            overlay.onclick = removeQrFloatResult;
+
+            // Result Box
+            const box = document.createElement('div');
+            box.className = 'qr-float-result';
+
+            // Close button
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'qr-float-close';
+            closeBtn.innerHTML = '&times;';
+            closeBtn.onclick = removeQrFloatResult;
+            box.appendChild(closeBtn);
+
+            // Title
+            const title = document.createElement('div');
+            title.className = 'qr-float-title';
+            title.textContent = error ? "QR Scan Failed" : "QR Code Result";
+            box.appendChild(title);
+
+            // Image preview
+            if (imgSrc) {
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.className = 'qr-float-img-preview';
+                img.alt = "Preview";
+                box.appendChild(img);
+            }
+
+            // Content
+            const content = document.createElement('div');
+            content.className = 'qr-float-content';
+            if (error) {
+                content.style.color = "#ff6e6e";
+                content.textContent = error;
+            } else {
+                content.textContent = result;
+            }
+            box.appendChild(content);
+
+            // Copy button if result
+            if (result) {
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'qr-float-copy-btn';
+                copyBtn.textContent = "Copy";
+                copyBtn.onclick = function() {
+                    navigator.clipboard.writeText(result);
+                    copyBtn.textContent = "Copied!";
+                    setTimeout(() => copyBtn.textContent = "Copy", 1200);
+                };
+                box.appendChild(copyBtn);
+            }
+
+            document.body.appendChild(overlay);
+            document.body.appendChild(box);
+        }
+
+        function removeQrFloatResult() {
+            document.querySelectorAll('.qr-float-overlay, .qr-float-result').forEach(e => e.remove());
+        }
+
+        // QR Type and Dynamic Fields
+        const qrType = document.getElementById('qrType');
+        const qrFields = document.getElementById('qrFields');
+        let qrFieldValues = {};
+
+        // Field templates for each type
+        const qrFieldTemplates = {
+            url: [
+                { label: "Website URL", name: "url", type: "url", placeholder: "https://example.com" }
+            ],
+            text: [
+                { label: "Text", name: "text", type: "textarea", placeholder: "Enter your message..." }
+            ],
+            contact: [
+                { label: "Full Name", name: "name", type: "text", placeholder: "John Doe" },
+                { label: "Phone", name: "phone", type: "tel", placeholder: "+1234567890" },
+                { label: "Email", name: "email", type: "email", placeholder: "john@example.com" },
+                { label: "Address", name: "address", type: "text", placeholder: "123 Main St, City" }
+            ],
+            wifi: [
+                { label: "SSID", name: "ssid", type: "text", placeholder: "WiFi Name" },
+                { label: "Password", name: "password", type: "text", placeholder: "WiFi Password" },
+                { label: "Encryption", name: "encryption", type: "select", options: ["WPA", "WEP", "nopass"] }
+            ],
+            email: [
+                { label: "Recipient Email", name: "to", type: "email", placeholder: "to@example.com" },
+                { label: "Subject", name: "subject", type: "text", placeholder: "Subject" },
+                { label: "Message", name: "body", type: "textarea", placeholder: "Message body" }
+            ],
+            sms: [
+                { label: "Phone Number", name: "phone", type: "tel", placeholder: "+1234567890" },
+                { label: "Message", name: "message", type: "textarea", placeholder: "SMS message" }
+            ],
+            phone: [
+                { label: "Phone Number", name: "phone", type: "tel", placeholder: "+1234567890" }
+            ],
+            calendar: [
+                { label: "Event Title", name: "title", type: "text", placeholder: "Meeting with Bob" },
+                { label: "Location", name: "location", type: "text", placeholder: "Office" },
+                { label: "Start Date/Time", name: "start", type: "datetime-local" },
+                { label: "End Date/Time", name: "end", type: "datetime-local" },
+                { label: "Description", name: "desc", type: "textarea", placeholder: "Event details" }
+            ],
+            geo: [
+                { label: "Latitude", name: "lat", type: "number", step: "any", placeholder: "37.7749" },
+                { label: "Longitude", name: "lng", type: "number", step: "any", placeholder: "-122.4194" }
+            ],
+            appstore: [
+                { label: "App Store URL", name: "url", type: "url", placeholder: "https://apps.apple.com/..." }
+            ],
+            payment: [
+                { label: "Payment URL (UPI/PayPal)", name: "url", type: "url", placeholder: "upi://pay?... or https://paypal.me/..." }
+            ]
+        };
+
+        function renderQrFields(type) {
+            qrFields.innerHTML = '';
+            qrFieldValues = {};
+            (qrFieldTemplates[type] || []).forEach(field => {
+                const wrapper = document.createElement('div');
+                wrapper.style.marginBottom = '10px';
+                const label = document.createElement('label');
+                label.textContent = field.label;
+                label.setAttribute('for', 'qrField_' + field.name);
+                wrapper.appendChild(label);
+                let input;
+                if (field.type === 'textarea') {
+                    input = document.createElement('textarea');
+                    input.rows = 2;
+                } else if (field.type === 'select') {
+                    input = document.createElement('select');
+                    field.options.forEach(opt => {
+                        const option = document.createElement('option');
+                        option.value = opt;
+                        option.textContent = opt;
+                        input.appendChild(option);
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.type = field.type;
+                    if (field.step) input.step = field.step;
+                }
+                input.id = 'qrField_' + field.name;
+                input.name = field.name;
+                input.placeholder = field.placeholder || '';
+                input.style.marginTop = '2px';
+                input.oninput = updateQrCode;
+                wrapper.appendChild(input);
+                qrFields.appendChild(wrapper);
+            });
+        }
+
+        qrType.addEventListener('change', function() {
+            renderQrFields(qrType.value);
+            updateQrCode();
+        });
+
+        // Compose QR data string based on type and fields
+        function getQrData() {
+            const type = qrType.value;
+            const data = {};
+            (qrFieldTemplates[type] || []).forEach(field => {
+                const el = document.getElementById('qrField_' + field.name);
+                data[field.name] = el ? el.value : '';
+            });
+
+            switch (type) {
+                case 'url':
+                case 'appstore':
+                case 'payment':
+                    return data.url || '';
+                case 'text':
+                    return data.text || '';
+                case 'contact':
+                    // vCard 3.0 format
+                    return `BEGIN:VCARD
+VERSION:3.0
+FN:${data.name || ''}
+TEL:${data.phone || ''}
+EMAIL:${data.email || ''}
+ADR:${data.address || ''}
+END:VCARD`;
+                case 'wifi':
+                    // WIFI:T:WPA;S:SSID;P:password;;
+                    return `WIFI:T:${data.encryption || 'WPA'};S:${data.ssid || ''};P:${data.password || ''};;`;
+                case 'email':
+                    // mailto:to?subject=...&body=...
+                    let mail = `mailto:${data.to || ''}`;
+                    const params = [];
+                    if (data.subject) params.push('subject=' + encodeURIComponent(data.subject));
+                    if (data.body) params.push('body=' + encodeURIComponent(data.body));
+                    if (params.length) mail += '?' + params.join('&');
+                    return mail;
+                case 'sms':
+                    // sms:phone?body=...
+                    let sms = `sms:${data.phone || ''}`;
+                    if (data.message) sms += `?body=${encodeURIComponent(data.message)}`;
+                    return sms;
+                case 'phone':
+                    return `tel:${data.phone || ''}`;
+                case 'calendar':
+                    // Simple VEVENT (not full spec)
+                    function formatDate(dt) {
+                        if (!dt) return '';
+                        return dt.replace(/[-:]/g, '').replace('T', 'T') + 'Z';
+                    }
+                    return `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:${data.title || ''}
+LOCATION:${data.location || ''}
+DTSTART:${formatDate(data.start)}
+DTEND:${formatDate(data.end)}
+DESCRIPTION:${data.desc || ''}
+END:VEVENT
+END:VCALENDAR`;
+                case 'geo':
+                    return `geo:${data.lat || ''},${data.lng || ''}`;
+                default:
+                    return '';
+            }
+        }
+
+        // Update QR code live
+        function updateQrCode() {
+            const qrData = getQrData();
+            qrcode.clear();
+            qrcode.makeCode(qrData);
+        }
+
+        // Initial render
+        renderQrFields(qrType.value);
+        updateQrCode();
+
+        // --- QR Type Detection for Scan Results ---
+        function detectQrType(data) {
+            if (!data) return { type: 'text', label: 'Text', action: null };
+            // URL
+            if (/^(https?:\/\/|ftp:\/\/|ftps:\/\/|www\.)[^\s]+$/i.test(data)) {
+                return { type: 'url', label: 'URL', action: data.startsWith('http') ? data : 'http://' + data };
+            }
+            // Email
+            if (/^mailto:/i.test(data)) {
+                return { type: 'email', label: 'Email', action: data };
+            }
+            // SMS
+            if (/^sms:/i.test(data)) {
+                return { type: 'sms', label: 'SMS', action: data };
+            }
+            // Phone
+            if (/^tel:/i.test(data)) {
+                return { type: 'phone', label: 'Phone', action: data };
+            }
+            // WiFi
+            if (/^WIFI:/i.test(data)) {
+                return { type: 'wifi', label: 'WiFi', action: null };
+            }
+            // vCard
+            if (/BEGIN:VCARD/i.test(data)) {
+                return { type: 'contact', label: 'Contact', action: null };
+            }
+            // Calendar
+            if (/BEGIN:VCALENDAR/i.test(data)) {
+                return { type: 'calendar', label: 'Calendar', action: null };
+            }
+            // Geo
+            if (/^geo:/i.test(data)) {
+                const geo = data.match(/^geo:([-\d.]+),([-\d.]+)/i);
+                if (geo) {
+                    return {
+                        type: 'geo',
+                        label: 'Location',
+                        action: `https://maps.google.com/?q=${geo[1]},${geo[2]}`
+                    };
+                }
+            }
+            // App Store
+            if (/^https?:\/\/(apps\.apple\.com|play\.google\.com)\//i.test(data)) {
+                return { type: 'appstore', label: 'App Store', action: data };
+            }
+            // Payment
+            if (/^(upi:|https?:\/\/(paypal\.me|paytm\.me|pay\.google\.com|pay\.tm|pay\.apple\.com|alipay\.com))/i.test(data)) {
+                return { type: 'payment', label: 'Payment', action: data };
+            }
+            return { type: 'text', label: 'Text', action: null };
+        }
+
+        // --- Enhance showQrFloatResult to hyperlink if possible ---
+        function showQrFloatResult({ result, imgSrc, error }) {
+            document.querySelectorAll('.qr-float-overlay, .qr-float-result').forEach(e => e.remove());
+            const overlay = document.createElement('div');
+            overlay.className = 'qr-float-overlay';
+            overlay.onclick = removeQrFloatResult;
+            const box = document.createElement('div');
+            box.className = 'qr-float-result';
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'qr-float-close';
+            closeBtn.innerHTML = '&times;';
+            closeBtn.onclick = removeQrFloatResult;
+            box.appendChild(closeBtn);
+            const title = document.createElement('div');
+            title.className = 'qr-float-title';
+            title.textContent = error ? "QR Scan Failed" : "QR Code Result";
+            box.appendChild(title);
+            if (imgSrc) {
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.className = 'qr-float-img-preview';
+                img.alt = "Preview";
+                box.appendChild(img);
+            }
+            const content = document.createElement('div');
+            content.className = 'qr-float-content';
+            if (error) {
+                content.style.color = "#ff6e6e";
+                content.textContent = error;
+            } else {
+                const detected = detectQrType(result);
+                if (detected.action) {
+                    content.innerHTML = `<b>${detected.label}:</b><br><a href="${detected.action}" target="_blank" rel="noopener">${result}</a>`;
+                } else {
+                    content.innerHTML = `<b>${detected.label}:</b><br>${result.replace(/\n/g, "<br>")}`;
+                }
+            }
+            box.appendChild(content);
+            if (result) {
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'qr-float-copy-btn';
+                copyBtn.textContent = "Copy";
+                copyBtn.onclick = function() {
+                    navigator.clipboard.writeText(result);
+                    copyBtn.textContent = "Copied!";
+                    setTimeout(() => copyBtn.textContent = "Copy", 1200);
+                };
+                box.appendChild(copyBtn);
+            }
+            document.body.appendChild(overlay);
+            document.body.appendChild(box);
+        }
+
+        // Global drag-and-drop for images
+        document.addEventListener('dragover', function(e) {
+            e.preventDefault();
+        });
+        document.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (e.target.closest('.modal, .qr-float-result')) return; // Ignore if modal/result open
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                handleGlobalImageFile(files[0]);
+            }
+        });
+
+        // Global paste for images
+        document.addEventListener('paste', function(e) {
+            if (e.target.closest('input, textarea, .modal, .qr-float-result')) return;
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.startsWith('image/')) {
+                    const file = items[i].getAsFile();
+                    handleGlobalImageFile(file);
+                    break;
+                }
+            }
+        });
+
+        function handleGlobalImageFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, img.width, img.height);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, canvas.width, canvas.height);
+                    if (code) {
+                        showQrFloatResult({ result: code.data, imgSrc: e.target.result });
+                    } else {
+                        showQrFloatResult({ error: "No QR code found in the image.", imgSrc: e.target.result });
+                    }
+                };
+                img.onerror = function() {
+                    showQrFloatResult({ error: "Could not load the image." });
+                };
+                img.src = e.target.result;
+            };
+            reader.onerror = function() {
+                showQrFloatResult({ error: "Failed to read the image file." });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Close modal on background click
+        scanModal.addEventListener('click', function(e) {
+            if (e.target === scanModal) closeScanModal();
+        });
+    </script>
+</body>
+</html>
